@@ -32,6 +32,7 @@ import org.ormi.priv.tfa.orderflow.lib.publishedlanguage.event.ProductRegistryEv
 import org.ormi.priv.tfa.orderflow.lib.publishedlanguage.event.ProductRemoved;
 import org.ormi.priv.tfa.orderflow.lib.publishedlanguage.event.ProductUpdated;
 import org.ormi.priv.tfa.orderflow.lib.publishedlanguage.event.config.ProductRegistryEventChannelName;
+import org.ormi.priv.tfa.orderflow.lib.publishedlanguage.query.config.ProductRegistryQueryChannelName;
 
 import io.quarkus.logging.Log;
 import io.smallrye.mutiny.Multi;
@@ -105,7 +106,7 @@ public class ProductRegistryCommandResource {
     // Create a stream of product registry events
     return Multi.createFrom().emitter(em -> {
       // Create consumer for product registry events with the given correlation id
-      final Consumer<ProductRegistryEvent> consumer = getEventsConsumerByCorrelationId(correlationId);
+      final Consumer<Message> consumer = getEventsConsumerByCorrelationId(correlationId);
       // Close the consumer on termination
       em.onTermination(() -> {
         try {
@@ -125,19 +126,43 @@ public class ProductRegistryCommandResource {
               Log.debug("No event received within timeout of " + timeout + " seconds.");
               em.complete();
             }
-            final ProductRegistryEvent evt = msg.get().getValue();
-            Log.debug("Received event: " + evt);
-            // Map event to DTO
-            if (evt instanceof ProductRegistered registered) {
-              Log.debug("Emitting DTO for registered event: " + registered);
-              // Emit DTO for registered event
-              em.emit(ProductRegistryEventDtoMapper.INSTANCE.toDto(registered));
-            } else {
-              // Fail the stream on unexpected event types
-              Throwable error = new ProductRegistryEventStreamException("Unexpected event type: " + evt.getClass().getName());
-              em.fail(error);
+
+            if (consumer instanceof ProductRegistryError productRegistryError){ // if message is error
+              em.fail(productRegistryError);
               return;
             }
+            if (consumer instanceof ProductRegistryEvent){ // if message is event
+              if (consumer.property.name instanceof ProductRegistered registered){ // if event is ProductRegistered
+                Log.debug("Emitting DTO for registered event: " + registered);
+                // Emit DTO for registered event
+                em.emit(ProductRegistryEventDtoMapper.INSTANCE.toDto(registered));
+              }
+              else if (consumer.property.name instanceof ProductUpdated updated){ // if event is ProductUpdated
+                Log.debug("Emitting DTO for updated event: " + updated);
+                // Emit DTO for updated event
+                em.emit(ProductRegistryEventDtoMapper.INSTANCE.toDto(updated));
+              }
+              else { // if event is ProductRemoved
+                Log.debug("Emitting DTO for removed event: " + consumerproperty.name);
+                // Emit DTO for removed event
+                em.emit(ProductRegistryEventDtoMapper.INSTANCE.toDto(consumer.property.name));
+              }
+            }
+
+            // final ProductRegistryEvent evt = msg.get().getValue();
+            // Log.debug("Received event: " + evt);
+            // // Map event to DTO
+            // if (evt instanceof ProductRegistered registered) {
+            //   Log.debug("Emitting DTO for registered event: " + registered);
+            //   // Emit DTO for registered event
+            //   em.emit(ProductRegistryEventDtoMapper.INSTANCE.toDto(registered));
+            // } else {
+            //   // Fail the stream on unexpected event types
+            //   Throwable error = new ProductRegistryEventStreamException("Unexpected event type: " + evt.getClass().getName());
+            //   em.fail(error);
+            //   return;
+            // }
+            
             // Acknowledge the message
             consumer.acknowledge(msg.get());
           } catch (PulsarClientException e) {
@@ -324,10 +349,10 @@ public class ProductRegistryCommandResource {
    * @param correlationId - correlation id to use for the consumer
    * @return Consumer for product registry events
    */
-  private Consumer<ProductRegistryEvent> getEventsConsumerByCorrelationId(String correlationId) {
+  private Consumer<Message> getEventsConsumerByCorrelationId(String correlationId) {
     try {
       // Define the channel name, topic and schema for the consumer
-      final String channelName = ProductRegistryEventChannelName.PRODUCT_REGISTRY_EVENT.toString();
+      final String channelName = ProductRegistryQueryChannelName.PRODUCT_REGISTRY_READ_RESULT.toString();
       final String topic = channelName + "-" + correlationId;
       // Create and return the subscription (consumer)
       return pulsarClients.getClient(channelName)
