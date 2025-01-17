@@ -19,6 +19,26 @@ public class ProductRegistryEventConsumer {
   public void handleEvent(ProductRegistryEvent event) {
     // Project the event
     projector.handleEvent(event);
-    // TODO: Sink the event here once or while projection is processed
+
+    // Get the producer for the correlation id
+    getEventSinkByCorrelationId(correlationId)
+      .thenAccept((producer) -> {
+        // Sink the event
+        producer
+            .newMessage()
+            .value(event)
+            .sendAsync()
+            .whenComplete((msgId, ex) -> {
+              if (ex != null) {
+                throw new RuntimeException("Failed to produce event for correlation id: " + correlationId, ex);
+              }
+              Log.debug(String.format("Sinked event with correlation id{%s} in msg{%s}", correlationId, msgId));
+              try {
+                producer.close();
+              } catch (PulsarClientException e) {
+                throw new RuntimeException("Failed to close producer", e);
+              }
+            });
+      });
   }
 }

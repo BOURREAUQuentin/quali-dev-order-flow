@@ -118,7 +118,7 @@ public class ProductRegistryEventEmitter {
    */
   private CompletionStage<Producer<ProductRegistryEvent>> getEventSinkByCorrelationId(String correlationId) {
     // Define the channel name, topic and schema definition
-    final String channelName = ProductRegistryEventChannelName.PRODUCT_REGISTRY_EVENT.toString();
+    final String channelName = ProductRegistryEventChannelName.PRODUCT_REGISTRY_READ_RESULT.toString();
     final String topic = channelName + "-" + correlationId;
     // Create and return a new Pulsar producer
     return pulsarClients.getClient(channelName)
