@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 /**
- * Interface scellée pour représenter les messages du canal (événements et erreurs).
+ * Sealed interface for representing channel messages (events and errors).
  */
 @JsonTypeInfo(
   use = JsonTypeInfo.Id.NAME,
