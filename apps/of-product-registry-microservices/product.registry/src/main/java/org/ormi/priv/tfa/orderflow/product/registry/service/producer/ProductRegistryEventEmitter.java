@@ -81,34 +81,34 @@ public class ProductRegistryEventEmitter {
     eventEmitter.send(removed);
   }
 
-  /**
-   * Produce the given event with the given correlation id.
-   * 
-   * @param correlationId - the correlation id
-   * @param event         - the event
-   */
-  public void sink(String correlationId, ProductRegistryEvent event) {
-    // Get the producer for the correlation id
-    getEventSinkByCorrelationId(correlationId)
-        .thenAccept((producer) -> {
-          // Sink the event to the producer
-          producer
-              .newMessage()
-              .value(event)
-              .sendAsync()
-              .whenComplete((msgId, ex) -> {
-                if (ex != null) {
-                  throw new EventProductionFailureException("Failed to produce event for correlation id: " + correlationId, ex);
-                }
-                Log.debug(String.format("Sinked event with correlation id{%s} in msg{%s}", correlationId, msgId));
-                try {
-                  producer.close(); // Close the producer after sending the message
-                } catch (PulsarClientException e) {
-                  throw new ProducerCloseFailureException("Failed to close producer", e);
-                }
-              });
-        });
-  }
+  // /**
+  //  * Produce the given event with the given correlation id.
+  //  * 
+  //  * @param correlationId - the correlation id
+  //  * @param event         - the event
+  //  */
+  // public void sink(String correlationId, ProductRegistryEvent event) {
+  //   // Get the producer for the correlation id
+  //   getEventSinkByCorrelationId(correlationId)
+  //       .thenAccept((producer) -> {
+  //         // Sink the event to the producer
+  //         producer
+  //             .newMessage()
+  //             .value(event)
+  //             .sendAsync()
+  //             .whenComplete((msgId, ex) -> {
+  //               if (ex != null) {
+  //                 throw new EventProductionFailureException("Failed to produce event for correlation id: " + correlationId, ex);
+  //               }
+  //               Log.debug(String.format("Sinked event with correlation id{%s} in msg{%s}", correlationId, msgId));
+  //               try {
+  //                 producer.close(); // Close the producer after sending the message
+  //               } catch (PulsarClientException e) {
+  //                 throw new ProducerCloseFailureException("Failed to close producer", e);
+  //               }
+  //             });
+  //       });
+  // }
 
   /**
    * Create a producer for the given correlation id.
@@ -118,7 +118,7 @@ public class ProductRegistryEventEmitter {
    */
   private CompletionStage<Producer<ProductRegistryEvent>> getEventSinkByCorrelationId(String correlationId) {
     // Define the channel name, topic and schema definition
-    final String channelName = ProductRegistryEventChannelName.PRODUCT_REGISTRY_EVENT.toString();
+    final String channelName = ProductRegistryEventChannelName.PRODUCT_REGISTRY_READ_RESULT.toString();
     final String topic = channelName + "-" + correlationId;
     // Create and return a new Pulsar producer
     return pulsarClients.getClient(channelName)
