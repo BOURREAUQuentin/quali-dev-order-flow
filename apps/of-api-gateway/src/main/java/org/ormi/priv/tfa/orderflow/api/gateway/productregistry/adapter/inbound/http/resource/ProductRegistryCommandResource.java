@@ -52,45 +52,107 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
 
+/**
+ * A processor that receives, processes, and emits events from a Pulsar consumer.
+ * 
+ * @param <T> The event type.
+ * 
+ * <p>This class allows configuration of event source, emitter, timeout, and handlers
+ * for termination, errors, and events.</p>
+ */
 public class ProductRegistryProcessor<T> {
 
+  /** The Pulsar consumer used to receive events. */
   private PulsarConsumer<T> consumer;
+
+  /** The emitter where processed events are sent. */
   private Emitter emitter;
+
+  /** Timeout in milliseconds for receiving events. */
   private int timeout;
+
+  /** Callback executed on termination. */
   private Runnable onTermination;
+
+  /** Callback executed on error. */
   private FunctionalConsumer<Throwable> onError;
+
+  /** Callback executed when an event is received. */
   private FunctionalConsumer<T> onEvent;
 
+  /**
+   * Sets the Pulsar consumer.
+   * 
+   * @param consumer The Pulsar consumer.
+   * @return The current ProductRegistryProcessor instance.
+   */
   public ProductRegistryProcessor<T> from(PulsarConsumer<T> consumer) {
       this.consumer = consumer;
       return this;
   }
 
+  /**
+   * Sets the emitter.
+   * 
+   * @param emitter The emitter.
+   * @return The current ProductRegistryProcessor instance.
+   */
   public ProductRegistryProcessor<T> withEmitter(Emitter emitter) {
       this.emitter = emitter;
       return this;
   }
 
+  /**
+   * Sets the timeout for receiving events.
+   * 
+   * @param timeout The timeout in milliseconds.
+   * @return The current ProductRegistryProcessor instance.
+   */
   public ProductRegistryProcessor<T> timeout(int timeout) {
       this.timeout = timeout;
       return this;
   }
 
+  /**
+   * Sets the termination callback.
+   * 
+   * @param onTermination The termination callback.
+   * @return The current ProductRegistryProcessor instance.
+   */
   public ProductRegistryProcessor<T> onTermination(Runnable onTermination) {
       this.onTermination = onTermination;
       return this;
   }
 
+  /**
+   * Sets the error callback.
+   * 
+   * @param onError The error callback.
+   * @return The current ProductRegistryProcessor instance.
+   */
   public ProductRegistryProcessor<T> onError(FunctionalConsumer<Throwable> onError) {
       this.onError = onError;
       return this;
   }
 
+  /**
+   * Sets the event callback.
+   * 
+   * @param onEvent The event callback.
+   * @return The current ProductRegistryProcessor instance.
+   */
   public ProductRegistryProcessor<T> onEvent(FunctionalConsumer<T> onEvent) {
       this.onEvent = onEvent;
       return this;
   }
 
+  /**
+   * Processes events from the Pulsar consumer and emits results.
+   * If an event is not received within the timeout, completes the emitter.
+   * If an error occurs, calls the error handler and fails the emitter.
+   * 
+   * @throws PulsarClientException if an error occurs during event processing.
+   */
   public void process() throws PulsarClientException {
       while (!emitter.isCancelled()) {
           try {
@@ -135,6 +197,10 @@ public class ProductRegistryCommandResource {
   @Channel("product-registry-command")
   Emitter<ProductRegistryCommand> commandEmitter;
 
+  /**
+   * The timeout value for processing events, retrieved from the configuration.
+   * Default value is 10000 milliseconds if not specified.
+   */
   @ConfigProperty(name = "product.registry.command.timeout", defaultValue = "10000")
   private int timeout;
 
