@@ -23,3 +23,6 @@ mp.messaging.incoming.product-registry-event.subscriptionType=Shared
 # Pulsar dev service
 quarkus.pulsar.devservices.enabled=true
 quarkus.pulsar.devservices.image-name=apachepulsar/pulsar:3.2.4
+
+# Define timeout of productRegistryCommand
+product.registry.command.timeout=10000
